@@ -1,0 +1,4 @@
+conda install -c conda-forge mamba  #instalacja mamby
+mamba create -n SRA_tools -c bioconda fastqc samtools bwa  #utworzenie środowiska
+conda activate SRA_tools  #aktywacja utworzonego środowiska
+mamba install bioconda::sra-tools #instalacja sra-tools
