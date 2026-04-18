@@ -1,0 +1,31 @@
+#utworzenie środowiska do trimowania
+conda create -n trimm_env
+conda activate trimm_env
+
+#pobranie trimmomatic
+mamba install trimmomatic -c conda-forge -c bioconda
+
+#przycięcie sekwencji zgodnie z wymaganiami
+trimmomatic PE \
+-threads 4 \
+-phred33 \
+SRR25629155_1.fastq.gz SRR25629155_2.fastq.gz \
+SRR25629155_1_trimmed.fastq.gz /dev/null \
+SRR25629155_2_trimmed.fastq.gz /dev/null \
+LEADING:20 \
+TRAILING:20 \
+SLIDINGWINDOW:5:20 \
+MINLEN:50
+
+#trimmomatic podaje statystyki dotyczące odsetka odczytów które przeszły trimowanie, 
+#zarówno w parach jak również tylko od F lub R. 
+#Podaje także odsetek odczytów odrzuconych
+
+#sprawdzenie jakości odczytów po trimowaniu
+fastqc -o fastqc_results --noextract -t 4 SRR25629155_1_trimmed.fastq.gz SRR25629155_2_trimmed.fastq.gz
+
+#podejrzenie raportów wynikowych
+explorer.exe  SRR25629155_1_trimmed_fastqc.html 
+explorer.exe  SRR25629155_2_trimmed_fastqc.html 
+
+#żaden z modułów nie uległ zmianie w stosunku do plików nieprzyciętych
