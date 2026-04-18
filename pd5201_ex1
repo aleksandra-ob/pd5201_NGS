@@ -2,3 +2,12 @@ conda install -c conda-forge mamba  #instalacja mamby
 mamba create -n SRA_tools -c bioconda fastqc samtools bwa  #utworzenie środowiska
 conda activate SRA_tools  #aktywacja utworzonego środowiska
 mamba install bioconda::sra-tools #instalacja sra-tools
+vdb-config -i  #konfiguracja sra-tools
+fastq-dump SRR25629155 --split-3 --skip-technical --gzip #pobieranie danych ->  BŁĄD 
+fastq-dump --version #sprawdzenie wersji sra-tools 
+conda search -c bioconda sra-tools #szukanie poprzednich wersji sra-tolls
+conda install -c bioconda sra-tools=3.2.1  #downgrade sra-tolls ze względu na błąd
+fastq-dump SRR25629155 --split-3 --skip-technical --gzip #pobieranie danych
+zcat SRR25629155_1.fastq.gz | head -n 10
+
+ID flowcelli: HWFV2DRXY
