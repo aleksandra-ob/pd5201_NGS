@@ -1,0 +1,23 @@
+#pobranie plików wynikowych sekwencjonowania dwóch kolejnych powtórzeń biologicznych
+fastq-dump SRR25629153 --split-3 --skip-technical --gzip
+fastq-dump SRR25629154 --split-3 --skip-technical --gzip 
+#wygenerowanie raportów jakości dla pobranych plików wynikowych
+fastqc -o /mnt/c/Users/ASUS/bioinfo_NGS/fastqc_results --noextract -t 4 SRR25629153_1.fastq.gz SRR25629153_2.fastq.gz SRR25629154_1.fastq.gz SRR25629154_2.fas
+tq.gz    
+#podejrzenie wszystkich raportów wynikowych
+explorer.exe SRR25629155_1_fastqc.html 
+explorer.exe SRR25629155_2_fastqc.html
+explorer.exe SRR25629154_1_fastqc.html
+explorer.exe SRR25629154_2_fastqc.html
+explorer.exe SRR25629153_1_fastqc.html
+explorer.exe SRR25629153_2_fastqc.html
+#instalacja multiqc
+mamba install -c conda-forge -c bioconda multiqc
+#utworzenie katalogu dla analizy jakości multiqc
+mkdir multiqc_results
+#analiza multiqc
+multiqc -o multiqc_results -f -v fastqc_results --fullnames
+#podejrzenie analizy multiqc
+explorer.exe multiqc_report.html
+
+#jakość odczytów we wszystkich powtórzeniach jest zbliżona, największą ilość duplikatów ma próbka SRR25629153_1 (forward)
