@@ -1,0 +1,6 @@
+mkdir fastqc_result #utworzenie katalogu dla wyników analizy jakości
+fastqc -o fastqc_results --noextract -t 4 SRR25629155_1.fastq.gz SRR25629155_2.fastq.gz #analiza jakości odczytów sparowanych 1 i 2
+explorer.exe SRR25629155_1_fastqc.html #podejrzenie raportów wynikowych 
+explorer.exe SRR25629155_2_fastqc.html
+
+w obu odczytach czerwony error został wygenerowany w przypadku modułu Per sequence GC content
