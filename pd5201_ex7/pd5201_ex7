@@ -1,0 +1,37 @@
+#instalaccja samtools
+mamba install samtools -c bioconda -c conda-forge
+
+#konwersja sam na bam
+samtools view -bS ecoli_rep1.sam  > ecoli_rep1.bam
+
+#podejrzenie pliku
+samtools view ecoli_rep1.bam | head
+
+#sortowanie
+samtools sort -o ecoli_rep1_sorted.bam ecoli_rep1.bam
+
+#nadanie indeksu
+samtools index ecoli_rep1_sorted.bam
+
+#sprawdzenie wielkości plików
+ls -lh
+
+#zapisanie w nano skryptu w bash do mapowania kolejnych powtórzeń eksperymentu
+nano skrypt_mapowanie.sh
+
+#uruchomienie skryptu
+bash skrypt_mapowanie.sh
+
+#zapisanie w nano skryptu w bash do usuwania duplikatów
+nano skrypt_deduplikacja.sh
+
+#uruchomienie skryptu
+bash skrypt_deduplikacja.sh
+
+#błąd dla pierwszego powtórzenia ze względu na nazwę
+#zmiana nazwy pliku bam 
+mv ecoli_rep1.bam SRR25629155.bam
+
+#ponowne uruchomienie skryptu
+bash skrypt_deduplikacja.sh
+
