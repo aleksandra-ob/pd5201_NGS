@@ -1,0 +1,46 @@
+# Indeksowanie genomu referencyjnego
+STAR \
+--runThreadN 8 \
+--runMode genomeGenerate \
+--genomeDir hg38_index \
+--genomeFastaFiles hg38.fa \
+--sjdbGTFfile gencode.v47.basic.annotation.gtf \
+--sjdbOverhang 59
+
+# Mapowanie i liczba zliczeń dla każdej próbki oddzielnie
+
+STAR \
+--runThreadN 8 \
+--genomeDir hg38_index \
+--readFilesIn WT_rep1.fastq.gz \
+--readFilesCommand zcat \
+--outFileNamePrefix WT_rep1_ \
+--outSAMtype BAM SortedByCoordinate \
+--quantMode GeneCounts
+
+STAR \
+--runThreadN 8 \
+--genomeDir hg38_index \
+--readFilesIn WT_rep2.fastq.gz \
+--readFilesCommand zcat \
+--outFileNamePrefix WT_rep2_ \
+--outSAMtype BAM SortedByCoordinate \
+--quantMode GeneCounts
+
+STAR \
+--runThreadN 8 \
+--genomeDir hg38_index \
+--readFilesIn MT_rep1.fastq.gz \
+--readFilesCommand zcat \
+--outFileNamePrefix MT_rep1_ \
+--outSAMtype BAM SortedByCoordinate \
+--quantMode GeneCounts
+
+STAR \
+--runThreadN 8 \
+--genomeDir hg38_index \
+--readFilesIn MT_rep2.fastq.gz \
+--readFilesCommand zcat \
+--outFileNamePrefix MT_rep2_ \
+--outSAMtype BAM SortedByCoordinate \
+--quantMode GeneCounts
