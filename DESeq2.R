@@ -1,10 +1,4 @@
-# =========================
-# Ex_18 – biomaRt + DESeq2
-# =========================
-
-# =========================
-# Instalacja pakietów (jeśli brak)
-# =========================
+#instalacja pakietów
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
@@ -14,27 +8,11 @@ if (!requireNamespace("biomaRt", quietly = TRUE))
 if (!requireNamespace("DESeq2", quietly = TRUE))
   BiocManager::install("DESeq2")
 
-# =========================
-# Wczytanie pakietów
-# =========================
+#wczytanie pakietów
 library(biomaRt)
 library(DESeq2)
 
-# =========================
-# (WARUNEK WSTĘPNY)
-# W środowisku muszą być obiekty z Ex_17:
-# counts  (macierz zliczeń)
-# coldata (ramka z kolumną 'condition': WT/MT)
-# =========================
-
-# szybka kontrola (opcjonalnie)
-stopifnot(!is.null(counts), !is.null(coldata))
-stopifnot(nrow(counts) > 0, ncol(counts) == 4)
-stopifnot(!is.null(rownames(counts)))
-
-# =========================
-# biomaRt – połączenie z Ensembl (useMart + host)
-# =========================
+# biomaRt
 
 library(biomaRt)
 
@@ -55,10 +33,6 @@ gene_annotations <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol",
 
 # podgląd adnotacji
 head(gene_annotations)
-
-# =========================
-# DESeq2 – analiza różnicowa
-# =========================
 
 # utworzenie obiektu DESeq2
 dds <- DESeqDataSetFromMatrix(
