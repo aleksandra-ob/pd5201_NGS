@@ -1,0 +1,220 @@
+PROJEKT - KOD
+
+#Pobranie sekwencji:
+fasterq-dump ERR103401 --split-files 
+fasterq-dump ERR103400 --split-files 
+fasterq-dump ERR103404 --split-files 
+
+#spakowanie plików
+gzip *.fastq
+
+#zmiana nazw dla łatwiejszego po
+
+#pacjent 0
+mv ERR103401_1.fastq.gz 1_index_1.fastq.gz
+mv ERR103401_2.fastq.gz 1_index_2.fastq.gz
+
+#pacjent z ogniska epidemicznego
+mv ERR103400_1.fastq.gz 2_outbreak_1.fastq.gz
+mv ERR103400_2.fastq.gz 2_outbreak_2.fastq.gz
+
+#nosiciel niezwiązany z ogniskiem epidemicznym
+mv ERR103404_1.fastq.gz 3_carriage_1.fastq.gz
+mv ERR103404_2.fastq.gz 3_carriage_2.fastq.gz
+
+======================
+#1. kontrola jakości
+=====================
+
+mkdir -p fastqc_raw
+fastqc *.fastq.gz -t 4 -o fastqc_raw/
+
+multiqc fastqc_raw/ -o multiqc_raw/
+
+==========================
+#2. wycinanie adapterów
+==========================
+
+mkdir -p adapter_trimmed
+
+for sample in 1_index 2_outbreak 3_carriage
+do
+  trimmomatic PE -threads 4 -phred33 \
+  ${sample}_1.fastq.gz ${sample}_2.fastq.gz \
+  adapter_trimmed/${sample}_1_adapter.fastq.gz adapter_trimmed/${sample}_1_unpaired.fastq.gz \
+  adapter_trimmed/${sample}_2_adapter.fastq.gz adapter_trimmed/${sample}_2_unpaired.fastq.gz \
+  ILLUMINACLIP:TruSeq3-PE.fa:2:30:10
+done
+
+#kontrola jakości po odcięciu adapterów
+mkdir -p fastqc_adapter
+
+fastqc adapter_trimmed/*_adapter.fastq.gz -t 4 -o fastqc_adapter/
+multiqc fastqc_adapter/ -o multiqc_adapter/
+
+==========================
+#3. przycinanie sekwencji
+=========================
+
+mkdir -p quality_trimmed
+
+for sample in 1_index 2_outbreak 3_carriage
+do
+  trimmomatic PE -threads 4 -phred33 \
+  adapter_trimmed/${sample}_1_adapter.fastq.gz adapter_trimmed/${sample}_2_adapter.fastq.gz \
+  quality_trimmed/${sample}_1_trimmed.fastq.gz quality_trimmed/${sample}_1_unpaired.fastq.gz \
+  quality_trimmed/${sample}_2_trimmed.fastq.gz quality_trimmed/${sample}_2_unpaired.fastq.gz \
+  LEADING:20 TRAILING:20 SLIDINGWINDOW:5:20 MINLEN:50
+done
+
+#kontrola jakości po trimmowaniu
+mkdir -p fastqc_trimmed
+fastqc quality_trimmed/*_trimmed.fastq.gz -t 4 -o fastqc_trimmed/
+
+multiqc fastqc_trimmed/ -o multiqc_trimmed/	
+
+# ponowne odcinanie adapterów
+mkdir -p adapter_trimmed_round2
+
+for sample in 1_index 2_outbreak 3_carriage
+do
+  trimmomatic PE -threads 4 -phred33 \
+  quality_trimmed/${sample}_1_trimmed.fastq.gz quality_trimmed/${sample}_2_trimmed.fastq.gz \
+  adapter_trimmed_round2/${sample}_1_clean.fastq.gz adapter_trimmed_round2/${sample}_1_unpaired.fastq.gz \
+  adapter_trimmed_round2/${sample}_2_clean.fastq.gz adapter_trimmed_round2/${sample}_2_unpaired.fastq.gz \
+  ILLUMINACLIP:NexteraPE-PE.fa:2:30:10
+done
+
+#kontrola jakości po ponownym trimmowaniu
+mkdir -p fastqc_final
+mkdir -p multiqc_final
+
+fastqc adapter_trimmed_round2/*_clean.fastq.gz -t 4 -o fastqc_final/
+
+multiqc fastqc_final/ -o multiqc_final/
+
+==============
+#4. mapowanie
+=============
+
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/013/425/GCF_000013425.1_ASM1342v1/GCF_000013425.1_ASM1342v1_genomic.fna.gz
+
+gunzip GCF_000013425.1_ASM1342v1_genomic.fna.gz
+mv GCF_000013425.1_ASM1342v1_genomic.fna staph_ref.fasta
+
+#indeks
+bwa index staph_ref.fasta
+
+mkdir -p mapping
+
+for sample in 1_index 2_outbreak 3_carriage
+do
+  # mapowanie
+  bwa mem -t 4 staph_ref.fasta \
+  quality_trimmed/${sample}_1_trimmed.fastq.gz \
+  quality_trimmed/${sample}_2_trimmed.fastq.gz \
+  > mapping/${sample}.sam
+
+  # konwersja do BAM
+  samtools view -bS mapping/${sample}.sam > mapping/${sample}.bam
+
+  # sortowanie
+  samtools sort mapping/${sample}.bam -o mapping/${sample}_sorted.bam
+
+  # indeks
+  samtools index mapping/${sample}_sorted.bam
+
+  # statystyki
+  samtools flagstat mapping/${sample}_sorted.bam > mapping/${sample}_stats.txt
+done
+
+==============
+# 5. IGV w GUI
+==============
+
+ =======================
+# 6. USUWANIE DUPLIKATÓW
+========================
+
+for sample in 1_index 2_outbreak 3_carriage
+do
+  # 1. sortowanie po nazwie 
+  samtools sort -n mapping/${sample}_sorted.bam -o mapping/${sample}_namesorted.bam
+
+  # 2. fixmate
+  samtools fixmate -m mapping/${sample}_namesorted.bam mapping/${sample}_fixmate.bam
+
+  # 3. sortowanie po pozycji
+  samtools sort mapping/${sample}_fixmate.bam -o mapping/${sample}_fixmate_sorted.bam
+
+  # 4. usuwanie duplikatów
+  samtools markdup -r mapping/${sample}_fixmate_sorted.bam mapping/${sample}_dedup.bam
+
+  # 5. indeks
+  samtools index mapping/${sample}_dedup.bam
+done
+
+================
+# 7. WARIANTY
+================
+
+for sample in 1_index 2_outbreak 3_carriage
+do
+  bcftools mpileup -f staph_ref.fasta \
+    -q 20 -Q 30 \
+    -Ou mapping/${sample}_dedup.bam | \
+  bcftools call -mv --ploidy 1 \
+    -Ov -o mapping/${sample}.vcf
+done	
+
+==============================
+# 8. FILTROWANIE WARIANTÓW
+===================================
+
+for sample in 1_index 2_outbreak 3_carriage
+do
+  bcftools filter -i 'QUAL>30 && DP>10' \
+  mapping/${sample}.vcf \
+  -Ov -o mapping/${sample}_filtered.vcf
+done
+
+
+# PORÓWNANIE LICZBY WARIANTÓW
+
+for sample in 1_index 2_outbreak 3_carriage
+do
+  echo ">>> $sample BEFORE"
+  grep -v "^#" mapping/${sample}.vcf | wc -l
+
+  echo ">>> $sample AFTER"
+  grep -v "^#" mapping/${sample}_filtered.vcf | wc -l
+done
+
+=============================
+# 9. ANNOTACJA
+=============================
+
+wykonana w galaxy
+
+===========================================
+# 10. PORÓWNANIE PRÓBEK (WSPÓLNE WARIANTY)
+============================================
+
+# kompresja
+for sample in 1_index 2_outbreak 3_carriage
+do
+  bgzip mapping/${sample}_filtered.vcf
+done
+
+# indeksowanie
+for sample in 1_index 2_outbreak 3_carriage
+do
+  tabix -p vcf mapping/${sample}_filtered.vcf.gz
+done
+
+# porównanie
+bcftools isec -p isec_output -n +2 \
+mapping/1_index_filtered.vcf.gz \
+mapping/2_outbreak_filtered.vcf.gz \
+mapping/3_carriage_filtered.vcf.gz
+
